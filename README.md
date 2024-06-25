@@ -1,6 +1,6 @@
 # Ritani Feeds Cli
 
-Once you have a vendor id and api key, you can use this program to upload your feed to ritani. Also, you can use it download your latest feed from ritani.
+Once you have a vendor id and api key, you can use this program to upload your feed to ritani. Also, you can use it download your latest feed and report from ritani.
 
 ## How to install
 
