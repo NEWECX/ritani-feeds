@@ -7,8 +7,8 @@ Once you have a vendor id and api key, you can use this program to upload your f
 ```
 npm install @ritani/feeds -g
 
-For install nodejs and npm, please refer to [NodeJs Site](https://nodejs.org/en/download/package-manager)
 ```
+For install nodejs and npm, please refer to [NodeJs Site](https://nodejs.org/en/download/package-manager)
 
 ## Usage
 ```
