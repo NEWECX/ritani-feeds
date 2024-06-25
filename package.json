@@ -1,5 +1,5 @@
 {
-  "name": "ritani-feed",
+  "name": "@ritani/feeds",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
