@@ -5,14 +5,15 @@ Once you have a vendor id and api key, you can use this program to upload your f
 ## How to install
 
 ```
-git clone https://github.com/NEWECX/ritani-feeds.git
-cd ritani-feeds
-npm install
+npm install @ritani/feeds -g
+
+For install nodejs and npm, please refer to [NodeJs Site](https://nodejs.org/en/download/package-manager)
 ```
 
 ## Usage
 ```
-node index.js 
+ritani-feeds
+
 Usage:
 
 # download diamonds feed
@@ -34,7 +35,7 @@ otherwise, the script will prompt for ritani vendor id and api key.
 
 ### First time download diamonds feeds
 ``` 
-node index.js -d
+ritani-feeds -d
 Enter your ritani vendor id: ***
 Enter your api key: ***
 Do you want to save id and key in .env? (n/y): y
@@ -43,12 +44,12 @@ Downloaded diamonds feed as downloaded-diamonds.csv successfully
 
 ### Download gemstones feeds
 ```
-node index.js -g 
+ritani-feeds -g 
 Downloaded gemstones feed as downloaded-gemstones.csv successfully
 ```
 
 ### Upload gemstones feeds 
 ```
-node index.js -g ./gemstones-feeds.csv 
+ritani-feeds -g ./gemstones-feeds.csv 
 Uploaded gemstones feed ./gemstones-feeds successfully
 ```

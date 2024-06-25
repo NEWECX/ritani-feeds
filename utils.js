@@ -1,20 +1,37 @@
-'use strict';
-
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import fetch from 'node-fetch';
+import dotEnv from 'dotenv';
+import readline from 'readline';
 
 const dotenvFile = '.env';
+const dotenvFilepath = path.join(process.cwd(), dotenvFile);
 
-require('dotenv').config(path.join(__dirname, dotenvFile));
+dotEnv.config(dotenvFilepath);
 
-module.exports = {
+export {
+    main,
     getCredentials,
     getOptions,
     downloadFeed,
     uploadFeed
 };
 
-const readline = require('readline');
+const apiUrl = 'https://api-server.newecx.com/api/feeds';
+
+async function main() {
+    //console.log(process.argv)
+    const { isDiamonds, feedPath } = getOptions();
+    const { id, key } = await getCredentials(apiUrl);
+    const Authorization = `Bearer ${id}:${key}`;
+    const target = isDiamonds ? 'diamonds' : 'gemstones';
+    const url = apiUrl + `/${target}`;
+    if (feedPath) {
+        return await uploadFeed(url, Authorization, target, feedPath);
+    } else {
+        return await downloadFeed(url, Authorization, target);
+    }
+};
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -41,8 +58,8 @@ async function getAnswer(question) {
 }
 
 async function getCredentials(apiUrl) {
-    let id = process.env.ID;
-    let key = process.env.API_KEY
+    let id = process.env.VENDOR_ID;
+    let key = process.env.VENDOR_API_KEY
     if (!id || !key) {
         let response
         for (let i = 0; i < 3; i++) {
@@ -57,7 +74,14 @@ async function getCredentials(apiUrl) {
                 let answer = await askQuestion(`Do you want to save id and key in ${dotenvFile}? (n/y): `);
                 answer = answer.trim().toLowerCase();
                 if (answer && answer[0] === 'y') {
-                    fs.writeFileSync(path.join(__dirname, dotenvFile), `ID=${id}\nAPI_KEY=${key}\n`);
+                    let lines;
+                    if (fs.existsSync(dotenvFilepath)) {
+                        lines = fs.readFileSync(dotenvFilepath, 'utf8').split('\n');
+                        lines = lines.filter(line => !line.startsWith('VENDOR_ID=') && !line.startsWith('VENDOR_API_KEY='));
+                    }
+                    if (!lines) lines = [];
+                    lines.push(`VENDOR_ID=${id}`, `VENDOR_API_KEY=${key}`);
+                    fs.writeFileSync(dotenvFilepath, lines.join('\n'));
                 }
                 break;
             } else {
@@ -121,89 +145,73 @@ function getOptions() {
 
 async function downloadFeed(url, Authorization, target) {
 
-    try {
-
-        const response = await fetch(url, { headers: { Authorization, redirect: 'follow' } });
-        
-        if (!response.ok) {
-            console.error(`Failed to download ${target} feed`);
-            return 1;
-        }
-
-        const filename = `downloaded-${target}.csv`;
-        if (fs.existsSync(filename)) {
-            fs.renameSync(filename, `downloaded-${target}-${Date.now()}.csv`);
-        }
-        
-        const fileStream = fs.createWriteStream(filename);
-        const reader = response.body.getReader();
-
-        const read = async () => {
- 
-            const { done, value } = await reader.read();
-            if (done) {
-                fileStream.end();
-                console.log(`Downloaded ${target} feed as ${filename} successfully`);
-                return;
-            }
- 
-            fileStream.write(value);
-            await read();
-        };
-
-        await read();
-
-        return 0;
-
-    } catch (err) {
-        console.error(`Fetch failed: ${err.message}`);
-        return 1;
+    const response = await fetch(url, { headers: { Authorization, redirect: 'follow' } });
+    
+    if (!response.ok) {
+        console.error(`Failed to download ${target} feed`);
+        return false;
     }
+
+    const filename = `downloaded-${target}.csv`;
+    if (fs.existsSync(filename)) {
+        fs.renameSync(filename, `downloaded-${target}-${Date.now()}.csv`);
+    }
+    
+    return await new Promise((resolve) => {
+    
+        const fileStream = fs.createWriteStream(filename);
+
+        fileStream.on('finish', () => {
+            console.log(`Downloaded ${target} feed successfully to ${filename}`);
+            resolve(true);
+        });
+
+        fileStream.on('error', (err) => {
+            console.error(`Failed to save ${target} feed to ${filename}: ${err.message}`);
+            resolve(false);
+        })
+
+        response.body.pipe(fileStream);
+    })
 }
 
 async function uploadFeed(url, Authorization, target, feedPath) {
 
-    try {
-        let response = await fetch(url + '?url=true',  {
-            method: 'PUT',
-            headers: { Authorization }
-        });
+    let response = await fetch(url + '?url=true',  {
+        method: 'PUT',
+        headers: { Authorization }
+    });
 
-        if (!response.ok) {
-            console.error(`Failed to upload ${target} feed. Status: ${response.status}`);
-            return 1
-        }
+    if (!response.ok) {
+        console.error(`Failed to upload ${target} feed. Status: ${response.status}`);
+        return false
+    }
 
-        const json = await response.json();
-        if (!json || !json.url) {
-            console.error(`Failed to get redirect url for ${target} feed`);
-            return 1;
-        }
+    const json = await response.json();
+    if (!json || !json.url) {
+        console.error(`Failed to get redirect url for ${target} feed`);
+        return false;
+    }
 
-        const fileStream = fs.createReadStream(feedPath);
-        const size = fs.statSync(feedPath).size;
+    const fileStream = fs.createReadStream(feedPath);
+    const size = fs.statSync(feedPath).size;
 
-        response = await fetch(json.url, {
-            method: 'PUT',
-            body: fileStream,
-            headers: {
-                'Content-Type': 'text/csv',
-                'Content-Length': size
-            },
-            duplex: 'half'
-        });
+    response = await fetch(json.url, {
+        method: 'PUT',
+        body: fileStream,
+        headers: {
+            'Content-Type': 'text/csv',
+            'Content-Length': size
+        },
+        duplex: 'half'
+    });
 
-        if (response.ok) {
-            console.log(`Uploaded ${target} feed ${feedPath} successfully`);
-            return 0;
-        } else {
-            console.error(`Failed to upload ${target} feed.`);
-            return 1;
-        }
-
-    } catch (err) {
-        console.error(`Fetch failed: ${err.message}`);
-        return 1;
+    if (response.ok) {
+        console.log(`Uploaded ${target} feed ${feedPath} successfully`);
+        return true;
+    } else {
+        console.error(`Failed to upload ${target} feed.`);
+        return false;
     }
 }
 
