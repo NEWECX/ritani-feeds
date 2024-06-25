@@ -5,7 +5,7 @@ Once you have a vendor id and api key, you can use this program to upload your f
 ## How to install
 
 ```
-git clone 
+git clone https://github.com/NEWECX/ritani-feeds.git
 cd ritani-feeds
 npm install
 ```
