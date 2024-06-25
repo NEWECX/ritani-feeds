@@ -1,0 +1,21 @@
+{
+  "name": "ritani-feed",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "readline": "^1.3.0"
+  },
+  "keywords": [
+    "ritani",
+    "feed",
+    "diamonds",
+    "gemstones"
+  ],
+  "author": "Sam Wen @ Ritani",
+  "license": "ISC"
+}
