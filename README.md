@@ -42,9 +42,13 @@ Downloaded diamonds feed as downloaded-diamonds.csv successfully
 ```
 
 ### Download gemstones feeds
+```
 node index.js -g 
 Downloaded gemstones feed as downloaded-gemstones.csv successfully
+```
 
 ### Upload gemstones feeds 
+```
 node index.js -g ./gemstones-feeds.csv 
 Uploaded gemstones feed ./gemstones-feeds successfully
+```
