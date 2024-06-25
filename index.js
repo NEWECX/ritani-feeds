@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 'use strict';
 
 const {
@@ -10,7 +12,7 @@ const {
 const apiUrl = 'https://api-server.newecx.com/api/feeds';
 
 (async () => {
-    console.log(process.argv)
+    //console.log(process.argv)
     const { isDiamonds, feedPath } = getOptions();
     const { id, key } = await getCredentials(apiUrl);
     const Authorization = `Bearer ${id}:${key}`;
