@@ -21,7 +21,7 @@ const apiUrl = 'https://api-server.newecx.com/api/feeds';
 
 async function main() {
     //console.log(process.argv)
-    const { isDiamonds, feedPath } = getOptions();
+    const { isDiamonds, feedPath, isReport } = getOptions();
     const { id, key } = await getCredentials(apiUrl);
     const Authorization = `Bearer ${id}:${key}`;
     const target = isDiamonds ? 'diamonds' : 'gemstones';
@@ -29,7 +29,7 @@ async function main() {
     if (feedPath) {
         return await uploadFeed(url, Authorization, target, feedPath);
     } else {
-        return await downloadFeed(url, Authorization, target);
+        return await downloadFeed(url, Authorization, target, isReport);
     }
 };
 
@@ -104,14 +104,20 @@ function printUsageAndExit(message) {
 # download diamonds feed
 ritani-feeds -d
 
+# download diamonds report
+ritani-feeds -dr
+
 # upload diamonds feed
 ritani-feeds -d /path/to/feed-file.csv
 
 # download gemstones feed
 ritani-feeds -g
 
+# download gemstones report
+ritani-feeds -gr
+
 # upload gemstones feed
-ritani-feeds -g [/path/to/feed-file.csv]
+ritani-feeds -g /path/to/feed-file.csv
 
 Note:
 if .env file is present in the current directory, it will be used to get the credentials.
@@ -124,37 +130,53 @@ function getOptions() {
     if (process.argv.length < 3) {
         printUsageAndExit();    
     }
-    if (process.argv.includes('-d') && process.argv.includes('-g')) {
-        printUsageAndExit('Only one of -d or -g is allowed'); 
+    const commands = process.argv.filter(arg => arg.startsWith('-'));
+    if (commands.length > 1) {
+        printUsageAndExit('Only one of -d, -dr, -g, -gr is allowed'); 
+    } else if (commands.length === 0) {
+        printUsageAndExit('One of -d, -dr, -g, -gr is required');
     }
-    const isDiamonds = process.argv.includes('-d');
-    const isGemstones = process.argv.includes('-g');
-    if (!isDiamonds && !isGemstones) {
-        printUsageAndExit('One of -d or -g is required');
+    const cmd = commands[0];
+    if (['-d', '-dr', '-g', '-gr'].indexOf(cmd) < 0) {
+        printUsageAndExit('Invalid command');
     }
+    if (cmd === '-dr' || cmd === '-gr') {
+        if (process.argv.length > 3) {
+            printUsageAndExit('No argument is allowed with -dr or -gr');
+        }
+    }
+    const isDiamonds = ['-d', '-dr'].indexOf(cmd) >= 0;
+    const isGemstones = ['-g', '-gr'].indexOf(cmd) >= 0;
+    const isReport = cmd.endsWith('r');
     let feedPath = process.argv[process.argv.length - 1];
-    if (feedPath === '-d' || feedPath === '-g') {
+    if (feedPath === '-d' || feedPath === '-g' || feedPath === '-dr' || feedPath === '-gr') {
         feedPath = null;
     } else {
         if (!fs.existsSync(feedPath)) {
             printUsageAndExit('feed filepath does not exist');
         }
     }
-    return { isDiamonds, isGemstones, feedPath };
+    return { isDiamonds, isGemstones, feedPath, isReport };
 }
 
-async function downloadFeed(url, Authorization, target) {
+async function downloadFeed(url, Authorization, target, isReport) {
+
+    if (isReport) url += '?report=true';
 
     const response = await fetch(url, { headers: { Authorization, redirect: 'follow' } });
     
     if (!response.ok) {
-        console.error(`Failed to download ${target} feed`);
+        console.error(`Failed to download ${target} ${isReport ? 'report' : 'feed'}. It may not be available yet.`);
         return false;
     }
 
-    const filename = `downloaded-${target}.csv`;
+    const filename = isReport ? `${target}-report.csv` : `downloaded-${target}.csv`;
     if (fs.existsSync(filename)) {
-        fs.renameSync(filename, `downloaded-${target}-${Date.now()}.csv`);
+        if (isReport) {
+            fs.renameSync(filename, `${target}-report-${Date.now()}.csv`);
+        } else {
+            fs.renameSync(filename, `downloaded-${target}-${Date.now()}.csv`);
+        }
     }
     
     return await new Promise((resolve) => {
@@ -162,12 +184,12 @@ async function downloadFeed(url, Authorization, target) {
         const fileStream = fs.createWriteStream(filename);
 
         fileStream.on('finish', () => {
-            console.log(`Downloaded ${target} feed successfully to ${filename}`);
+            console.log(`Downloaded ${target} ${isReport ? 'report' : 'feed'} successfully to ${filename}`);
             resolve(true);
         });
 
         fileStream.on('error', (err) => {
-            console.error(`Failed to save ${target} feed to ${filename}: ${err.message}`);
+            console.error(`Failed to save ${target} ${isReport ? 'report' : 'feed'} to ${filename}: ${err.message}`);
             resolve(false);
         })
 
