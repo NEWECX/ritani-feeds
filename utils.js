@@ -74,12 +74,11 @@ async function getCredentials(apiUrl) {
                 let answer = await askQuestion(`Do you want to save id and key in ${dotenvFile}? (n/y): `);
                 answer = answer.trim().toLowerCase();
                 if (answer && answer[0] === 'y') {
-                    let lines;
+                    let lines = [];
                     if (fs.existsSync(dotenvFilepath)) {
                         lines = fs.readFileSync(dotenvFilepath, 'utf8').split('\n');
                         lines = lines.filter(line => !line.startsWith('VENDOR_ID=') && !line.startsWith('VENDOR_API_KEY='));
                     }
-                    if (!lines) lines = [];
                     lines.push(`VENDOR_ID=${id}`, `VENDOR_API_KEY=${key}`);
                     fs.writeFileSync(dotenvFilepath, lines.join('\n'));
                 }
